@@ -1,0 +1,42 @@
+{
+  "name": "somewhere-reverse-travel-agent",
+  "description": "A feeling-first reverse travel agent prototype built with React and TokenHub.",
+  "private": false,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=20.19.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "start": "vite preview --host 127.0.0.1",
+    "preview": "vite preview --host 127.0.0.1",
+    "build": "tsc -b --pretty false && vite build",
+    "test": "vitest run --exclude 'server/**/*.test.mjs' --exclude 'deploy/**/*.test.mjs'",
+    "test:tokenhub": "node --test server/tokenhub-agent.test.mjs",
+    "test:media-insight": "node --test server/media-insight.test.mjs",
+    "test:vercel": "node --test deploy/vercel/api/agent.test.mjs deploy/vercel/api/media-insight.test.mjs deploy/vercel/api/poi-verification.test.mjs deploy/vercel/api/poi-discovery.test.mjs deploy/vercel/api/route.test.mjs deploy/vercel/api/weather.test.mjs",
+    "test:poi-verification": "node --test server/poi-verification.test.mjs",
+    "test:poi-discovery": "node --test server/poi-discovery.test.mjs",
+    "test:routing": "node --test server/routing.test.mjs",
+    "test:weather": "node --test server/weather.test.mjs",
+    "test:shared-governor": "node --test server/shared-rate-governor.test.mjs",
+    "lint": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "lucide-react": "latest",
+    "maplibre-gl": "^6.1.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vitest": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}

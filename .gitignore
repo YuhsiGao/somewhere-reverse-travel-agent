@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+*.tsbuildinfo
+coverage
+.env
+.env.*
+!.env.example
+*.local
+# Local TokenHub compatibility file. It can contain a real key and must never
+# be staged, even for a private repository.
+key.md

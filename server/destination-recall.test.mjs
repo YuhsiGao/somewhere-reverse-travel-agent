@@ -10,7 +10,7 @@ const candidates = [
   { city: '温岭', region: '台州', country: '中国', role: 'easy-to-reach', tagline: '近一点，也可以把生活调静。', atmosphere: ['石塘', '海风'], reasons: ['短途可考虑', '日常感强'], tradeoff: '旺季人流要确认。', budgetNote: '价格随日期变化。', alternative: '象山', coordinates: [121.37, 28.37], outline: [{ theme: '看海不赶路', intro: '把移动变轻。', anchor: '一段海岸线' }, { theme: '黄昏停坐', intro: '晚一点再回去。', anchor: '一处海边坐点' }] },
 ];
 
-const request = (body, init = {}) => new Request('https://example.test/api/destination-recall', { method: 'POST', headers: { 'content-type': 'application/json', ...init.headers }, body: JSON.stringify(body), ...init });
+const request = (body, init = {}) => new Request('https://example.test/api/destination-recall', { ...init, method: 'POST', headers: { 'content-type': 'application/json', 'x-somewhere-api-key': 'test-secret', ...init.headers }, body: JSON.stringify(body) });
 const handler = (overrides = {}) => createDestinationRecallHandler({ env: { TOKENHUB_API_KEY: 'test-secret', TOKENHUB_BASE_URL: 'https://tokenhub.test' }, createRequestId: () => 'recall_test', now: () => new Date('2026-08-09T00:00:00.000Z'), fetch: async () => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(candidates) } }] }), { status: 200 }), ...overrides });
 
 test('validates exactly three role-differentiated candidates and enforces scope and day count', () => {
@@ -26,7 +26,7 @@ test('returns only validated recall candidates without exposing the upstream sec
   const payload = await response.json();
   assert.equal(payload.candidates.length, 3);
   assert.equal(payload.candidates[0].city, '东山岛');
-  assert.match(upstreamRequest.url, /tokenhub\.test\/v1\/chat\/completions$/);
+  assert.match(upstreamRequest.url, /tokenhub\.tencentmaas\.com\/v1\/chat\/completions$/);
   assert.equal(upstreamRequest.init.headers.authorization, 'Bearer test-secret');
   assert.doesNotMatch(JSON.stringify(payload), /test-secret/);
 });

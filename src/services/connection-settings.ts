@@ -59,3 +59,7 @@ export function connectionHeaders(settings: ConnectionSettings, kind: 'agent' | 
   if (settings.apiKey) headers['x-somewhere-api-key'] = settings.apiKey;
   return headers;
 }
+
+export function hasConnectionKey(settings: Pick<ConnectionSettings, 'apiKey'>): boolean {
+  return settings.apiKey.trim().length > 0;
+}

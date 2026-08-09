@@ -13,6 +13,10 @@ test('uses a bounded browser BYOK override without exposing it', () => {
   assert.deepEqual(result, { gateway: TOKENHUB_GATEWAY, model: 'hunyuan-t1', apiKey: 'user-owned-key' });
 });
 
+test('never falls back to a server-side key', () => {
+  assert.deepEqual(resolveTokenHubConnection(request({}), { TOKENHUB_API_KEY: 'deployment-key' }, 'hy3'), { error: 'missing_key' });
+});
+
 test('refuses browser-provided custom gateway and malformed models', () => {
   assert.deepEqual(resolveTokenHubConnection(request({ 'x-somewhere-gateway': 'https://not-allowed.example' }), { TOKENHUB_API_KEY: 'key' }, 'hy3'), { error: 'invalid_gateway' });
   assert.deepEqual(resolveTokenHubConnection(request({ 'x-somewhere-model': 'bad model name' }), { TOKENHUB_API_KEY: 'key' }, 'hy3'), { error: 'invalid_model' });

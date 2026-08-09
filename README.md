@@ -20,7 +20,7 @@ npm install
 npm run dev
 ```
 
-默认支持两种模式：当前本地 `.env.local` 可开启 TokenHub 在线氛围解析；如果 TokenHub 不可用，页面会自动回退到内置 Demo 数据，不会阻塞演示。开发代理会**优先读取** `TOKENHUB_API_KEY` 环境变量；仅在该变量未配置时，才回退读取本地 `key.md` 的 `tokenhub:` 值。
+默认支持两种模式：当前本地 `.env.local` 可开启 TokenHub 在线氛围解析；如果 TokenHub 不可用，页面会自动回退到内置 Demo 数据，不会阻塞演示。在线模式要求用户在右上角「设置」中配置本次会话的 TokenHub Key；服务端不保存、不兜底读取 Key。
 
 安全说明：开发服务只绑定 `127.0.0.1`，并阻止对 `key.md`、`.env*`、`.git` 的 HTTP 访问。请将 TokenHub key 视为开发密钥，不要分享或提交；若曾在局域网运行旧版本，建议立即在 TokenHub 控制台轮换该 key。
 
@@ -58,11 +58,11 @@ pnpm preview
 
 ## AI / TokenHub 接入
 
-开发模式已经接入真实 TokenHub：Vite 服务端代理优先读取 `TOKENHUB_API_KEY`，未配置时才读取本地 `key.md` 中的 `tokenhub:`；随后调用 TokenHub 的 OpenAI 兼容 `/v1/chat/completions` 接口。浏览器先接收结构化 `VibeProfile`，用户确认后再由独立的 `/api/destination-recall` 动态召回 3 个不同角色的目的地。服务端会校验范围、天数、角色、坐标与体验纲要结构，拒绝不完整模型输出；返回的地点、坐标和体验锚点都明确标为**未核验的 Agent 草案**。在线服务不可用时，页面会立即退回本地编辑库，保证演示不中断。已接入用户主动触发的 OSM 附近地点发现，但真实 POI 召回与审核数据层尚未接入。
+开发模式已经接入真实 TokenHub：浏览器在用户明确配置 Key 后，通过受控 BFF 调用 TokenHub 的 OpenAI 兼容 `/v1/chat/completions` 接口。浏览器先接收结构化 `VibeProfile`，用户确认后再由独立的 `/api/destination-recall` 动态召回 3 个不同角色的目的地。服务端会校验范围、天数、角色、坐标与体验纲要结构，拒绝不完整模型输出；返回的地点、坐标和体验锚点都明确标为**未核验的 Agent 草案**。没有 Key 时，页面会弹窗要求配置；在线服务不可用时，页面会明确退回本地编辑库，保证演示不中断。已接入用户主动触发的 OSM 附近地点发现，但真实 POI 召回与审核数据层尚未接入。
 
 TokenHub 官方入口使用广州区域 `https://tokenhub.tencentmaas.com`，模型由 `TOKENHUB_MODEL` 配置。项目当前 `.env.local` 使用 `hy3`；如果账号没有该模型，可先用 `GET /v1/models` 查询后替换。
 
-页面右上角的「设置」支持本机覆盖旅行 Agent 模型、图片理解模型与 TokenHub Key；模型设置会持久保存在该设备，Key 仅保留在当前浏览器会话，并通过同源 BFF 发送给官方 TokenHub 网关。它会覆盖下一次偏好解析、目的地召回和图片理解请求；关闭浏览器会话后 Key 自动失效。为避免将 BFF 变成任意地址代理，浏览器侧仅允许官方 TokenHub 广州网关；生产环境仍建议将平台 Key 配置在服务端密钥管理中。
+页面右上角的「设置」支持本机覆盖旅行 Agent 模型、图片理解模型与 TokenHub Key；模型设置会持久保存在该设备，Key 仅保留在当前浏览器会话，并通过同源 BFF 发送给官方 TokenHub 网关。没有 Key 时，AI 解析、目的地召回和图片理解会先要求打开设置完成配置；关闭浏览器会话后 Key 自动失效。为避免将 BFF 变成任意地址代理，浏览器侧仅允许官方 TokenHub 广州网关，服务端也不会保存或配置用户 Key。
 
 可选的图片理解使用独立的服务端接口，模型由 `TOKENHUB_MEDIA_MODEL` 配置；图片可以是明确授权的本地 JPG/PNG/WebP，或用户主动粘贴的公开 HTTPS 链接。服务端不会下载链接，只会拒绝内网/本地/带凭据 URL 后将其转交视觉模型，并把上游结果收敛为受限标签。腾讯云公开的 TokenHub 多模态协议支持 `image_url`；默认示例模型为 YT‑VITA，具体账号可用性仍须验证，以其[官方多模态理解文档](https://cloud.tencent.com/document/product/1823/130988)为准。当前账号的真实视觉请求仍出现超时或不可用，**尚未证明视觉模型可稳定使用**。声音输入采用浏览器语音转写，不会上传原始音频文件。
 
@@ -70,17 +70,17 @@ TokenHub 官方入口使用广州区域 `https://tokenhub.tencentmaas.com`，模
 
 天气核验通过 `/api/weather` BFF 按用户选择的地点和日期向 Open-Meteo 查询日级 `weather_code`、最高/最低温、最高降水概率与最大风速；服务端有 2KB 输入上限、12 秒超时和 10 分钟成功缓存，浏览器不会接触上游原始响应。天气预报会变化且不等于预警，因此页面保留查询时间与安全提示。字段语义以 [Open-Meteo 官方文档](https://open-meteo.com/en/docs) 为准。
 
-密钥永远不要放进 `VITE_` 变量、浏览器 bundle 或提交到 Git。开发时优先使用未提交的 `TOKENHUB_API_KEY`；`key.md` 仅是兼容性的本地测试回退。详见 [生产 API 接入说明](docs/PRODUCTION_API.md)。
+密钥永远不要放进 `VITE_` 变量、浏览器 bundle 或提交到 Git。用户 Key 仅在当前浏览器会话中保存，并以请求头发送给受控 BFF。详见 [生产 API 接入说明](docs/PRODUCTION_API.md)。
 
 ## CloudBase 部署
 
-项目已接入 CloudBase 环境 `yuxi-d1gt0cq1de912944c`：前端部署到静态托管，受控 BFF 部署为 HTTP 云函数 `somewhere-api`。浏览器只访问 BFF；TokenHub Key 仅存在云函数环境变量和本地未提交配置中。
+项目已接入 CloudBase 环境 `yuxi-d1gt0cq1de912944c`：前端部署到静态托管，受控 BFF 部署为 HTTP 云函数 `somewhere-api`。浏览器只访问 BFF；TokenHub Key 不配置在云函数或前端构建产物中。
 
 - 站点：`https://yuxi-d1gt0cq1de912944c-1314461082.tcloudbaseapp.com/`
 - API：`https://yuxi-d1gt0cq1de912944c.service.tcloudbase.com/api`
 - 健康检查：`/api/health`
 
-后续更新时，在本地配置好 `TOKENHUB_API_KEY` 后执行：
+后续更新时执行：
 
 ```bash
 pnpm prepare:cloudbase

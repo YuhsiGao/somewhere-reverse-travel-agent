@@ -24,7 +24,7 @@ import { geometryFor } from './data/geography';
 import { interpretWithTokenHub, recallDestinationsWithTokenHub } from './services/remote-agent';
 import { destinationFromAgent } from './services/agent-destination';
 import { analyzeAuthorizedImage, analyzeAuthorizedImageUrl, MediaInsightError } from './services/media-insight';
-import { readConnectionSettings, saveConnectionSettings, type ConnectionSettings } from './services/connection-settings';
+import { hasConnectionKey, readConnectionSettings, saveConnectionSettings, type ConnectionSettings } from './services/connection-settings';
 import { track } from './services/session-analytics';
 import { clearPreferenceProfile, derivePreferenceProfile, rankByPreferenceIncrement, savePreferenceProfile, type PreferenceProfile } from './services/preference-learning';
 import type { Destination, Scenario, Status, VibeProfile } from './types';
@@ -247,6 +247,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [showSaved, setShowSaved] = useState(false);
   const [showConnectionSettings, setShowConnectionSettings] = useState(false);
+  const [connectionRequired, setConnectionRequired] = useState(false);
   const [connectionSettings, setConnectionSettings] = useState<ConnectionSettings>(readConnectionSettings);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showRestoreNotice, setShowRestoreNotice] = useState(() => Boolean(lastTravelQuery?.text));
@@ -311,6 +312,12 @@ export default function App() {
   const schedule = (callback: () => void, delay: number, flowId: number) => { const id = window.setTimeout(() => { timersRef.current.delete(id); if (flowId === flowIdRef.current) callback(); }, delay); timersRef.current.add(id); };
   const focusTravelBrief = () => document.querySelector<HTMLTextAreaElement>('[aria-label="描述你想要的旅行感觉"]')?.focus();
   const cancelAndReturnToEditor = () => { cancelFlow(); setStatus('idle'); setStep(0); setAdjustment(''); focusTravelBrief(); };
+  const requireConnectionKey = () => {
+    if (!REAL_AGENT_ENABLED || hasConnectionKey(connectionSettings)) return true;
+    setConnectionRequired(true);
+    setShowConnectionSettings(true);
+    return false;
+  };
   const currentScrollBehavior = () => scrollBehaviorFor(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   const intentContext = () => `范围：${scope === 'domestic' ? '只看国内' : scope === 'abroad' ? '只看海外' : '国内外皆可'}；天数：${days} 天；预算：${budget === 'low' ? '尽量低' : budget === 'medium' ? '适中' : '灵活'}；出发地：${departure}；交通偏好：${transportLabels[transport]}。${mediaSummary ? `\n本地多模态灵感（仅用户确认的文字摘要，不含文件）：${mediaSummary}` : ''}`;
   const recordQueryChange = (change: string) => { setQueryVersion((version) => version + 1); setQueryChange(change); setSelected(null); setDynamicResults(null); };
@@ -322,6 +329,7 @@ export default function App() {
   const closeSaved = () => { setShowSaved(false); window.setTimeout(() => savedTriggerRef.current?.focus(), 0); };
   const clearLocalPreference = () => { clearPreferenceProfile(); setPreferenceProfile(undefined); setAdjustment('已清除本地偏好记忆；收藏仍会保留'); };
   const analyzeImageWithConsent = async (file: File, description: string) => {
+    if (!requireConnectionKey()) throw new MediaInsightError('service_unavailable');
     try {
       return await analyzeAuthorizedImage(file, description, { connection: connectionSettings });
     } catch (error) {
@@ -332,6 +340,7 @@ export default function App() {
     }
   };
   const analyzeImageUrlWithConsent = async (url: string, description: string) => {
+    if (!requireConnectionKey()) throw new MediaInsightError('service_unavailable');
     try {
       return await analyzeAuthorizedImageUrl(url, description, globalThis.fetch, connectionSettings);
     } catch (error) {
@@ -347,6 +356,7 @@ export default function App() {
   };
 
   const run = (nextText = text, nextScenario = inferScenario(nextText), refining = false) => {
+    if (!requireConnectionKey()) return;
     const flowId = cancelFlow();
     if (nextText.trim().length < 8) { setError('再多说一点点。比如：天气、同行的人，或者你想避开什么。'); setStatus('error'); return; }
     const scopedScenario = scope === 'domestic' ? 'domestic' : scope === 'abroad' && nextScenario === 'domestic' ? 'harbor' : nextScenario;
@@ -378,7 +388,7 @@ export default function App() {
     // A failed intent parse already tells us the upstream is unavailable. Do
     // not make the person wait through a second timeout before the local
     // editorial fallback can appear.
-    if (!REAL_AGENT_ENABLED || agentConnection !== 'online' || !profile) return null;
+    if (!REAL_AGENT_ENABLED || agentConnection !== 'online' || !profile || !requireConnectionKey()) return null;
     try {
       const candidates = await recallDestinationsWithTokenHub({ input: text, profile, constraints: { ...constraints, transport: transportLabels[constraints.transport] } }, connectionSettings);
       if (flowId !== flowIdRef.current) return null;
@@ -407,6 +417,7 @@ export default function App() {
     });
   };
   const refine = (label: string) => {
+    if (!requireConnectionKey()) return;
     const nextScope: Scope = label === '只看国内' ? 'domestic' : scope;
     const nextBudget: Budget = label === '预算降低' ? 'low' : budget;
     const nextScenario = deriveResultScenario(scenario, nextScope);
@@ -453,7 +464,7 @@ export default function App() {
     </main>
     <footer><span>去处 SOMEWHERE · A TRAVEL AGENT FOR FEELINGS</span><span>AI 生成的氛围提案，不构成旅行安全或预订建议。</span></footer>
     {showSaved && <div className="modal-backdrop" onClick={closeSaved}><div className="saved-modal" role="dialog" aria-modal="true" aria-labelledby="saved-dialog-title" onClick={(event) => event.stopPropagation()}><button id="saved-dialog-close" className="close-button" aria-label="关闭收藏弹层" onClick={closeSaved}><X size={18} /></button><div className="section-kicker">YOUR SAVED PLACES</div><h2 id="saved-dialog-title">收藏的去处</h2>{saved.length === 0 ? <div className="empty-state"><Heart size={24} /><p>还没有收藏。<br />遇见一个让你心动的地方吧。</p></div> : <div className="saved-list">{Object.values(destinations).flat().filter((place) => saved.includes(place.id)).map((place) => <button key={place.id} onClick={() => { choosePlace(place); closeSaved(); }}><span>{place.city}</span><small>{place.country} · {place.tagline}</small><ArrowRight size={15} /></button>)}</div>}</div></div>}
-    {showConnectionSettings && <ConnectionSettingsDialog value={connectionSettings} onClose={() => setShowConnectionSettings(false)} onSave={(next) => { setConnectionSettings(saveConnectionSettings(next)); setShowConnectionSettings(false); setAdjustment('模型连接设置已保存，将在下一次 AI 请求生效'); }} />}
+    {showConnectionSettings && <ConnectionSettingsDialog value={connectionSettings} required={connectionRequired} onClose={() => { setShowConnectionSettings(false); setConnectionRequired(false); }} onSave={(next) => { const safe = saveConnectionSettings(next); setConnectionSettings(safe); setShowConnectionSettings(false); setConnectionRequired(false); setAdjustment(hasConnectionKey(safe) ? '模型连接设置已保存，将在下一次请求生效' : '未配置 TokenHub Key，AI 功能暂不可用'); }} />}
     {adjustment && status !== 'refining' && <div className="toast"><Check size={15} /> {adjustment}</div>}
   </div>;
 }

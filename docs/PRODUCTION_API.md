@@ -85,11 +85,10 @@ flowchart LR
 
 示例入口是 [`deploy/vercel/api/agent.mjs`](../deploy/vercel/api/agent.mjs)。它使用 Vercel Node Function 的 `req` / `res` 形式，关闭 Vercel 默认 body parser 后，将原始请求转换为 Fetch `Request`，交给唯一的共享核心 `createTokenHubAgentHandler({ env: process.env })`。它不会读取 `key.md`，不会向浏览器暴露密钥，也不会在前端包中写入 TokenHub Key。
 
-在选择 Vercel 作为部署平台时，将该文件放入 Vercel 识别的 API Function 路径（或按你的仓库结构配置构建输出），并确保它和 `server/tokenhub-agent.mjs` 一同进入服务端部署产物。然后仅在 Vercel Project Settings → Environment Variables 设置：
+在选择 Vercel 作为部署平台时，将该文件放入 Vercel 识别的 API Function 路径（或按你的仓库结构配置构建输出），并确保它和 `server/tokenhub-agent.mjs` 一同进入服务端部署产物。TokenHub Key 不放在 Vercel 或其他服务端环境变量中，而由用户在页面设置中提供：
 
 | 变量 | 必填 | 用途 |
 | --- | --- | --- |
-| `TOKENHUB_API_KEY` | 是 | TokenHub 服务端密钥；只在 Function 运行时可读 |
 | `TOKENHUB_BASE_URL` | 否 | 上游兼容接口根地址，默认 `https://tokenhub.tencentmaas.com` |
 | `TOKENHUB_MODEL` | 否 | 模型别名，默认 `hy3` |
 | `TOKENHUB_MEDIA_MODEL` | 否 | 已明确授权的图片理解模型；必须在目标账号上验证权限与稳定性 |
@@ -98,7 +97,7 @@ flowchart LR
 
 ## 服务端职责清单
 
-1. 读取平台密钥管理中的 `TOKENHUB_API_KEY`、`TOKENHUB_BASE_URL`、`TOKENHUB_MODEL`；图片理解接口另读取 `TOKENHUB_MEDIA_MODEL`。不读取项目根目录的 `key.md`。本地 Vite 开发代理已经优先使用 `TOKENHUB_API_KEY`，但这个兼容实现本身不是生产服务。
+1. 读取请求头中的用户会话 Key、`TOKENHUB_MODEL` 和 `TOKENHUB_MEDIA_MODEL`；网关固定为官方 TokenHub 地址。不读取项目根目录的 `key.md`，也不从服务端环境变量读取 TokenHub Key。
 2. 验证请求 JSON、字符数、媒体字段策略和速率限制；文字接口限制单次 body 大小，例如 16 KB。图片接口应只接受显式授权的单张 JPG/PNG/WebP，独立限制请求体大小与超时，拒绝文件名、路径及未经允许的媒体类型。
 3. 使用固定系统提示词和 JSON Schema/严格解析，校验 `summary`、情绪数组、分数范围等响应字段。
 4. 设置连接与总超时，建议上游 8–12 秒；失败时返回可读错误，让前端明确展示“在线不可用/已降级”。
@@ -110,7 +109,7 @@ flowchart LR
 
 生产服务端可沿用 OpenAI 兼容的 `/v1/chat/completions` 调用方式，但需要满足以下约束：
 
-- API Key 仅由服务端以 `Authorization: Bearer ...` 发送。
+- API Key 由受控 BFF 从本次请求头读取后，以 `Authorization: Bearer ...` 发送；BFF 不持久化、不回显。
 - 低温度、严格 JSON 输出，并对模型返回内容做 Schema 校验；不能仅用正则截取后直接信任。
 - 将模型名配置化；模型权限或可用性变化时，服务端应能切换或关闭在线能力。
 - 对上游错误做分类：认证/配额问题报警，临时网络错误短暂重试，内容解析失败直接降级而不是无限重试。

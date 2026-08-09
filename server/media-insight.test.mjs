@@ -4,7 +4,7 @@ import { createMediaInsightHandler, validateImageDataUrl, validateMediaInsight, 
 
 const image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
 const validInsight = { summary: '温暖、安静的城市慢游灵感。', tags: ['安静', '咖啡', '散步'] };
-const request = (body, init = {}) => new Request('https://example.test/api/media-insight', { method: 'POST', headers: { 'content-type': 'application/json', ...init.headers }, body, ...init });
+const request = (body, init = {}) => new Request('https://example.test/api/media-insight', { ...init, method: 'POST', headers: { 'content-type': 'application/json', 'x-somewhere-api-key': 'test-secret', ...init.headers }, body });
 const handler = (overrides = {}) => createMediaInsightHandler({
   env: { TOKENHUB_API_KEY: 'test-secret', TOKENHUB_BASE_URL: 'https://tokenhub.test' },
   createRequestId: () => 'req_media', now: () => new Date('2026-08-04T00:00:00.000Z'),
@@ -55,7 +55,7 @@ test('sends only image URL and optional description upstream then returns a sani
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.deepEqual(payload.insight, validInsight); assert.equal(payload.meta.mode, 'live'); assert.equal(payload.meta.requestId, 'req_media');
-  assert.match(captured.url, /tokenhub\.test\/v1\/chat\/completions$/); assert.equal(captured.init.headers.authorization, 'Bearer test-secret');
+  assert.match(captured.url, /tokenhub\.tencentmaas\.com\/v1\/chat\/completions$/); assert.equal(captured.init.headers.authorization, 'Bearer test-secret');
   const upstreamBody = JSON.parse(captured.init.body);
   assert.equal(upstreamBody.model, 'youtu-vita'); assert.equal(upstreamBody.messages[0].content[1].type, 'image_url'); assert.equal(upstreamBody.messages[0].content[1].image_url.url, image);
   assert.doesNotMatch(JSON.stringify(payload), /test-secret|data:image|private\.png/);
@@ -72,7 +72,7 @@ test('supports an explicit media model override and safe error degradation', asy
   let model;
   const override = await handler({ env: { TOKENHUB_API_KEY: 'test-secret', TOKENHUB_MEDIA_MODEL: 'vision-override' }, fetch: async (_url, init) => { model = JSON.parse(init.body).model; return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(validInsight) } }] }), { status: 200 }); } })(request(JSON.stringify({ imageDataUrl: image })));
   assert.equal(override.status, 200); assert.equal(model, 'vision-override');
-  const unconfigured = await handler({ env: {} })(request(JSON.stringify({ imageDataUrl: image })));
+  const unconfigured = await handler({ env: {} })(request(JSON.stringify({ imageDataUrl: image }), { headers: { 'x-somewhere-api-key': '' } }));
   assert.equal(unconfigured.status, 503); assert.equal((await unconfigured.json()).error.code, 'service_not_configured');
   const malformed = await handler({ fetch: async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"summary":"only"}' } }] }), { status: 200 }) })(request(JSON.stringify({ imageDataUrl: image })));
   assert.equal(malformed.status, 502); assert.equal((await malformed.json()).error.code, 'invalid_upstream_insight');

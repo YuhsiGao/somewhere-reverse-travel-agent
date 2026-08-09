@@ -9,15 +9,15 @@ const present = (value, max) => typeof value === 'string' && value.trim().length
 export function resolveTokenHubConnection(request, env, fallbackModel) {
   const headerGateway = request.headers.get('x-somewhere-gateway');
   const requestedGateway = headerGateway?.trim().replace(/\/$/, '');
-  // Deployment configuration is trusted server-side. Only the browser override
-  // is constrained, preventing a request from proxying to arbitrary hosts.
+  // Only the browser-provided gateway is accepted, preventing a request from
+  // turning this BFF into an arbitrary outbound proxy.
   if (requestedGateway && requestedGateway !== TOKENHUB_GATEWAY) return { error: 'invalid_gateway' };
-  const gateway = requestedGateway || env.TOKENHUB_BASE_URL?.trim().replace(/\/$/, '') || TOKENHUB_GATEWAY;
+  const gateway = requestedGateway || TOKENHUB_GATEWAY;
   const headerModel = request.headers.get('x-somewhere-model')?.trim();
   const model = headerModel || env.TOKENHUB_MODEL || fallbackModel;
   if (!MODEL_NAME.test(model)) return { error: 'invalid_model' };
   const headerKey = request.headers.get('x-somewhere-api-key')?.trim();
-  const apiKey = headerKey || env.TOKENHUB_API_KEY;
+  const apiKey = headerKey;
   if (!present(apiKey, 500)) return { error: 'missing_key' };
   return { apiKey, gateway, model };
 }

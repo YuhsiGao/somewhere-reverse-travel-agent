@@ -1,4 +1,5 @@
 import type { GeoPoint } from '../types';
+import { apiUrl } from './api-url';
 
 export type PoiReference = {
   displayName: string;
@@ -56,7 +57,7 @@ export function parsePoiReferenceVerification(value: unknown): PoiReferenceVerif
 
 export async function verifyPoiReference(name: string, coordinates: GeoPoint, fetcher: typeof fetch = globalThis.fetch): Promise<PoiReferenceVerification> {
   try {
-    const response = await fetcher('/api/poi-verification', {
+    const response = await fetcher(apiUrl('/api/poi-verification'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, coordinates }),
     });
     const value: unknown = await response.json().catch(() => null);

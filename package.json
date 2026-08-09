@@ -23,6 +23,7 @@
     "test:routing": "node --test server/routing.test.mjs",
     "test:weather": "node --test server/weather.test.mjs",
     "test:shared-governor": "node --test server/shared-rate-governor.test.mjs",
+    "prepare:cloudbase": "node scripts/prepare-cloudbase-function.mjs",
     "lint": "tsc -b --pretty false"
   },
   "dependencies": {

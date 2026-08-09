@@ -70,7 +70,26 @@ TokenHub 官方入口使用广州区域 `https://tokenhub.tencentmaas.com`，模
 
 天气核验通过 `/api/weather` BFF 按用户选择的地点和日期向 Open-Meteo 查询日级 `weather_code`、最高/最低温、最高降水概率与最大风速；服务端有 2KB 输入上限、12 秒超时和 10 分钟成功缓存，浏览器不会接触上游原始响应。天气预报会变化且不等于预警，因此页面保留查询时间与安全提示。字段语义以 [Open-Meteo 官方文档](https://open-meteo.com/en/docs) 为准。
 
-密钥永远不要放进 `VITE_` 变量、浏览器 bundle 或提交到 Git。开发时优先使用未提交的 `TOKENHUB_API_KEY`；`key.md` 仅是兼容性的本地测试回退。当前 `/api/agent` 只存在于 Vite 开发服务器，生产必须部署 BFF/云函数并在平台密钥管理中配置密钥，详见 [生产 API 接入说明](docs/PRODUCTION_API.md)。
+密钥永远不要放进 `VITE_` 变量、浏览器 bundle 或提交到 Git。开发时优先使用未提交的 `TOKENHUB_API_KEY`；`key.md` 仅是兼容性的本地测试回退。详见 [生产 API 接入说明](docs/PRODUCTION_API.md)。
+
+## CloudBase 部署
+
+项目已接入 CloudBase 环境 `yuxi-d1gt0cq1de912944c`：前端部署到静态托管，受控 BFF 部署为 HTTP 云函数 `somewhere-api`。浏览器只访问 BFF；TokenHub Key 仅存在云函数环境变量和本地未提交配置中。
+
+- 站点：`https://yuxi-d1gt0cq1de912944c-1314461082.tcloudbaseapp.com/`
+- API：`https://yuxi-d1gt0cq1de912944c.service.tcloudbase.com/api`
+- 健康检查：`/api/health`
+
+后续更新时，在本地配置好 `TOKENHUB_API_KEY` 后执行：
+
+```bash
+pnpm prepare:cloudbase
+tcb fn deploy somewhere-api --httpFn --path /api --runtime Nodejs20.19
+pnpm build
+tcb hosting deploy ./dist
+```
+
+`cloudbaserc.json` 及云函数复制出的运行时代码已被 `.gitignore` 排除；只提交 `cloudbaserc.example.json`、函数入口和准备脚本。CloudBase 路由必须把 `/api` 以 `WEB_SCF` 类型指向 `somewhere-api`，否则网关会在到达函数前返回参数错误。
 
 ## Agent 工作流
 

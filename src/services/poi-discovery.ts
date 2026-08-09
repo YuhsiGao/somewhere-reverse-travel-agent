@@ -1,4 +1,5 @@
 import type { GeoPoint } from '../types';
+import { apiUrl } from './api-url';
 
 export const POI_DISCOVERY_CATEGORIES = ['park', 'cafe', 'museum', 'viewpoint'] as const;
 export type PoiDiscoveryCategory = (typeof POI_DISCOVERY_CATEGORIES)[number];
@@ -48,7 +49,7 @@ export function parsePoiDiscovery(value: unknown): PoiDiscovery | undefined {
 export async function discoverNearbyPois(coordinates: GeoPoint, query: PoiDiscoveryCategory, fetcher: typeof fetch = globalThis.fetch): Promise<PoiDiscovery> {
   if (!isPoint(coordinates) || !validCategory(query)) throw new PoiDiscoveryError();
   try {
-    const response = await fetcher('/api/poi-discovery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coordinates, query }) });
+    const response = await fetcher(apiUrl('/api/poi-discovery'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coordinates, query }) });
     const value: unknown = await response.json().catch(() => null);
     const parsed = response.ok ? parsePoiDiscovery(value) : undefined;
     if (!parsed) throw new PoiDiscoveryError();

@@ -1,4 +1,5 @@
 import type { GeoPoint } from '../types';
+import { apiUrl } from './api-url';
 
 export type WeatherForecast = {
   date: string;
@@ -49,7 +50,7 @@ export function parseWeatherResponse(value: unknown): WeatherForecast | undefine
 
 export async function getWeatherForecast(coordinates: GeoPoint, date: string, fetcher: typeof fetch = globalThis.fetch): Promise<WeatherForecast> {
   try {
-    const response = await fetcher('/api/weather', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coordinates, date }) });
+    const response = await fetcher(apiUrl('/api/weather'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coordinates, date }) });
     const value: unknown = await response.json().catch(() => null);
     const forecast = response.ok ? parseWeatherResponse(value) : undefined;
     if (!forecast) throw new WeatherForecastError();

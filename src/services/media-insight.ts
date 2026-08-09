@@ -1,5 +1,6 @@
 import type { ImageInsight } from '../hooks/useLocalMedia';
 import { connectionHeaders, type ConnectionSettings } from './connection-settings';
+import { apiUrl } from './api-url';
 
 const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_DESCRIPTION_LENGTH = 1000;
@@ -73,7 +74,7 @@ export type MediaInsightClientOptions = {
 
 async function requestInsight(body: { imageDataUrl?: string; imageUrl?: string; description?: string }, fetcher: typeof fetch, connection?: ConnectionSettings): Promise<ImageInsight[]> {
   try {
-    const response = await fetcher('/api/media-insight', {
+    const response = await fetcher(apiUrl('/api/media-insight'), {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...(connection ? connectionHeaders(connection, 'vision') : {}) }, body: JSON.stringify(body),
     });
     const payload: unknown = await response.json().catch(() => null);

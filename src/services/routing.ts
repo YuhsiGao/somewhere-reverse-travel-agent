@@ -1,4 +1,5 @@
 import type { GeoPoint } from '../types';
+import { apiUrl } from './api-url';
 
 /** OSRM supports road-network profiles only; it is not a public-transit API. */
 export type RoutableTravelMode = 'walk' | 'bike' | 'drive' | 'taxi';
@@ -69,7 +70,7 @@ const PROFILE_BY_MODE: Record<RoutableTravelMode, 'walking' | 'cycling' | 'drivi
   taxi: 'driving',
 };
 
-const DEFAULT_BASE_URL = '/api/route';
+const DEFAULT_BASE_URL = apiUrl('/api/route');
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_CACHE_TTL_MS = 2 * 60_000;
 

@@ -1,5 +1,6 @@
 import type { VibeProfile } from '../types';
 import { connectionHeaders, type ConnectionSettings } from './connection-settings';
+import { apiUrl } from './api-url';
 
 export type RecalledDestination = {
   id: string;
@@ -30,7 +31,7 @@ export async function interpretWithTokenHub(input: string, connection?: Connecti
   // from being immediately labelled as local-demo mode.
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const response = await fetch('/api/agent', {
+      const response = await fetch(apiUrl('/api/agent'), {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...(connection ? connectionHeaders(connection, 'agent') : {}) }, body: JSON.stringify({ input }),
       });
       const payload = await response.json().catch(() => null) as { profile?: VibeProfile; error?: string | { message?: string } } | null;
@@ -48,7 +49,7 @@ export async function interpretWithTokenHub(input: string, connection?: Connecti
 /** Dynamic recall is intentionally separate from intent parsing so the UI can
  * show the user's interpreted preferences before it asks the model for places. */
 export async function recallDestinationsWithTokenHub(request: DestinationRecallRequest, connection?: ConnectionSettings): Promise<RecalledDestination[]> {
-  const response = await fetch('/api/destination-recall', {
+  const response = await fetch(apiUrl('/api/destination-recall'), {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...(connection ? connectionHeaders(connection, 'agent') : {}) }, body: JSON.stringify(request),
   });
   const payload = await response.json().catch(() => null) as { candidates?: RecalledDestination[]; error?: { message?: string } } | null;

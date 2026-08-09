@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "yuxi-d1gt0cq1de912944c",
+  "functionRoot": "cloudfunctions",
+  "functions": [{
+    "name": "somewhere-api",
+    "runtime": "Nodejs20.19",
+    "timeout": 60,
+    "memorySize": 512,
+    "isHTTP": true,
+    "handler": "index.main",
+    "envVariables": {
+      "TOKENHUB_BASE_URL": "https://tokenhub.tencentmaas.com",
+      "TOKENHUB_MODEL": "hy3",
+      "TOKENHUB_MEDIA_MODEL": "youtu-vita"
+    }
+  }]
+}

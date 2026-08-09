@@ -10,3 +10,6 @@ coverage
 # Local TokenHub compatibility file. It can contain a real key and must never
 # be staged, even for a private repository.
 key.md
+# Generated from local credentials immediately before a CloudBase function deploy.
+cloudbaserc.json
+cloudfunctions/somewhere-api/server/
